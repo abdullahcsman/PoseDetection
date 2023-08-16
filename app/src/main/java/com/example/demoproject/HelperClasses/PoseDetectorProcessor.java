@@ -16,6 +16,8 @@
 
 package com.example.demoproject.HelperClasses;
 
+import android.app.Activity;
+import android.app.Application;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.text.LineBreaker;
@@ -25,8 +27,12 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.view.PreviewView;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.lifecycle.ViewModelStoreOwner;
 
 import com.example.demoproject.HelperClasses.classification.PoseClassifierProcessor;
+import com.example.demoproject.MainActivity;
+import com.example.demoproject.View.PoseViewModel;
 import com.example.demoproject.View.Result;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -51,8 +57,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-
-import kotlinx.coroutines.channels.Send;
 
 /** A processor to run pose detector. */
 public class PoseDetectorProcessor extends VisionBaseProcessor<PoseDetectorProcessor.PoseWithClassification> {
@@ -91,21 +95,22 @@ public class PoseDetectorProcessor extends VisionBaseProcessor<PoseDetectorProce
 
     private GraphicOverlay graphicOverlay;
     private PreviewView previewView;
+    private Result result;
 
-    public class SendResult {
-
-        private Result result;
-
-        public void setResultListener(Result listener) {
-            this.result = result;
-        }
-
-        public void passData(String value) {
-            if (result != null) {
-                result.onResult(value);
-            }
-        }
-    }
+//    public class SendResult {
+//
+//        private Result result;
+//
+//        public void setResultListener(Result listener) {
+//            this.result = result;
+//        }
+//
+//        public void passData(String value) {
+//            if (result != null) {
+//                result.onResult(value);
+//            }
+//        }
+//    }
 
     public  PoseDetectorProcessor(
             PoseDetectorOptionsBase options,
@@ -129,18 +134,22 @@ public class PoseDetectorProcessor extends VisionBaseProcessor<PoseDetectorProce
         classificationExecutor = Executors.newSingleThreadExecutor();
     }
 
+//    PoseDetectorProcessor (Result result) {
+//        this.result = result;
+//    }
+
     public void stop() {
         detector.close();
     }
     public Task<PoseWithClassification> detectInImage(ImageProxy imageProxy, Bitmap bitmap, int rotationDegrees) {
-//        Toast.makeText(context, "Jumbo", Toast.LENGTH_LONG).show();
         MlImage mlImage = new BitmapMlImageBuilder(bitmap).setRotation(rotationDegrees).build();
+        PoseViewModel viewModel = new ViewModelProvider((ViewModelStoreOwner) context).get(PoseViewModel.class);
         int rotation = imageProxy.getImageInfo().getRotationDegrees();
         // In order to correctly display the face bounds, the orientation of the analyzed
         // image and that of the viewfinder have to match. Which is why the dimensions of
         // the analyzed image are reversed if its rotation information is 90 or 270.
         boolean reverseDimens = rotation == 90 || rotation == 270;
-        Log.d(TAG, "rotation: " + rotation);
+//        Log.d(TAG, "rotation: " + rotation);
         int width;
         int height;
         if (reverseDimens) {
@@ -160,7 +169,7 @@ public class PoseDetectorProcessor extends VisionBaseProcessor<PoseDetectorProce
                                 pose.getAllPoseLandmarks();
                                 collectedData.add(pose.getAllPoseLandmarks());
                                 Log.d(TAG, collectedData.toString());
-                                exportDataToJSON();
+                                exportDataToJSON(viewModel);
                             }
                             List<String> classificationResult = new ArrayList<>();
                             if (runClassification) {
@@ -187,13 +196,14 @@ public class PoseDetectorProcessor extends VisionBaseProcessor<PoseDetectorProce
     }
 
     // This is the function for exporting data to JSON
-    private void exportDataToJSON() {
+    private void exportDataToJSON(PoseViewModel viewModel) throws IllegalAccessException {
         JSONArray jsonArray = new JSONArray();
         for (List<PoseLandmark> poseLandmarks : collectedData) {
             JSONArray landmarksArray = new JSONArray();
             for (PoseLandmark landmark : poseLandmarks) {
                 JSONObject landmarkObject = new JSONObject();
                 try {
+                    landmarkObject.put("timestamp", System.currentTimeMillis());
                     landmarkObject.put("x", landmark.getPosition().x);
                     landmarkObject.put("y", landmark.getPosition().y);
                     landmarkObject.put("type", landmark.getLandmarkType());
@@ -206,28 +216,11 @@ public class PoseDetectorProcessor extends VisionBaseProcessor<PoseDetectorProce
             jsonArray.put(landmarksArray);
         }
         String jsonString = jsonArray.toString();
-        Log.d(TAG, "BEFORE: " + jsonString);
-        SendResult result = new SendResult();
-        result.passData(jsonString);
-        //        saveJsonToFile(jsonString, "pose_data.json");
+        viewModel.updateValue(jsonString);
     }
 
 
-//    private void saveJsonToFile(String jsonString, String fileName) {
-//        try {
-//            File file = new File(getExternalFilesDir(null), fileName);
-//            FileOutputStream fos = new FileOutputStream(file);
-//            OutputStreamWriter osw = new OutputStreamWriter(fos);
-//
-//            osw.write(jsonString);
-//            osw.flush();
-//            osw.close();
-//
-//            // Notify the user that the file has been saved
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
+
 
     private void onSuccessPoseClassified(
             @NonNull PoseWithClassification poseWithClassification, int width, int height) {

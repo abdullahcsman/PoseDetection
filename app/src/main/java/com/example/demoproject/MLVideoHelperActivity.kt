@@ -18,8 +18,11 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import com.example.demoproject.HelperClasses.GraphicOverlay
 import com.example.demoproject.HelperClasses.VisionBaseProcessor
+import com.example.demoproject.View.PoseViewModel
+import com.example.demoproject.View.Result
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.mlkit.vision.pose.Pose
@@ -27,16 +30,17 @@ import com.google.mlkit.vision.pose.PoseLandmark
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
-import java.io.ByteArrayOutputStream
+import java.io.*
 import java.nio.ByteBuffer
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
 
-abstract class MLVideoHelperActivity : AppCompatActivity(), com.example.demoproject.View.Result {
+abstract class MLVideoHelperActivity : AppCompatActivity(), Result {
     protected var previewView: PreviewView? = null
     protected var graphicOverlay: GraphicOverlay? = null
+    protected var result: Result? = null
     private var outputTextView: TextView? = null
     private var startButton: Button? = null
     private var stopButton: Button? = null
@@ -65,10 +69,30 @@ abstract class MLVideoHelperActivity : AppCompatActivity(), com.example.demoproj
         stopButton?.setOnClickListener {
             onStopClick()
         }
-        cameraProviderFuture = ProcessCameraProvider.getInstance(applicationContext)
+
         processor = setProcessor()
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.CAMERA), REQUEST_CAMERA)
+        }
+
+        val viewModel: PoseViewModel = ViewModelProvider(this)[PoseViewModel::class.java]
+        viewModel.valueLiveData.observe(this) { newValue ->
+            Log.d(TAG, "In Activity: $newValue")
+        }
+    }
+
+    private fun saveJsonToFile(jsonString: String, fileName: String) {
+        try {
+            val file = File(getExternalFilesDir(null), fileName)
+            val fos = FileOutputStream(file)
+            val osw = OutputStreamWriter(fos)
+            osw.write(jsonString)
+            osw.flush()
+            osw.close()
+
+            // Notify the user that the file has been saved
+        } catch (e: IOException) {
+            e.printStackTrace()
         }
     }
 
@@ -83,9 +107,10 @@ abstract class MLVideoHelperActivity : AppCompatActivity(), com.example.demoproj
         stopButton?.visibility = View.VISIBLE
         graphicOverlay?.visibility = View.VISIBLE
         previewView?.visibility = View.VISIBLE
-        initSource()
+        if(cameraProviderFuture == null) {
+            initSource()
+        }
         collectedData.clear()
-        processPoseData()
     }
 
     private fun onStopClick() {
@@ -94,13 +119,12 @@ abstract class MLVideoHelperActivity : AppCompatActivity(), com.example.demoproj
         previewView?.visibility = View.INVISIBLE
         graphicOverlay?.visibility = View.INVISIBLE
         startButton?.visibility = View.VISIBLE
-        exportDataToJSON()
     }
 
     private val TAG = "PoseDetectorProcessor"
 
     override fun onResult(result: String) {
-        Log.d(TAG, "In Activity: $result")
+
     }
 
     private fun exportDataToJSON() {
@@ -125,6 +149,7 @@ abstract class MLVideoHelperActivity : AppCompatActivity(), com.example.demoproj
             jsonArray.put(landmarksArray)
         }
         val jsonString = jsonArray.toString()
+
         // Save jsonString to a JSON file (e.g., using FileWriter or other methods)
     }
 
@@ -151,6 +176,7 @@ abstract class MLVideoHelperActivity : AppCompatActivity(), com.example.demoproj
     }
 
     private fun initSource() {
+        cameraProviderFuture = ProcessCameraProvider.getInstance(applicationContext)
         cameraProviderFuture?.addListener(Runnable {
             try {
                 val cameraProvider: ProcessCameraProvider = cameraProviderFuture!!.get()
