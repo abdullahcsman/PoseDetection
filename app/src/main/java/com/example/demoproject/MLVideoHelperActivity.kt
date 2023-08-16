@@ -46,8 +46,6 @@ abstract class MLVideoHelperActivity : AppCompatActivity(){
     private var startButton: Button? = null
     private var stopButton: Button? = null
     private var viewButton: Button? = null
-    private var scroll: ScrollView? = null
-    private var jsonTx: TextView? = null
     private var isCollectingData = false
     private val pose: Pose? = null
     private val collectedData: MutableList<MutableList<PoseLandmark>> = mutableListOf()
@@ -63,8 +61,7 @@ abstract class MLVideoHelperActivity : AppCompatActivity(){
         previewView = findViewById(R.id.camera_source_preview)
         graphicOverlay = findViewById(R.id.graphic_overlay)
         outputTextView = findViewById(R.id.output_text_view)
-        scroll = findViewById(R.id.scrollView)
-        jsonTx = findViewById(R.id.jsonTextView)
+
         startButton = findViewById(R.id.startBtn)
         stopButton = findViewById(R.id.stopBtn)
         viewButton = findViewById(R.id.viewBtn)
@@ -89,8 +86,8 @@ abstract class MLVideoHelperActivity : AppCompatActivity(){
 
         val viewModel: PoseViewModel = ViewModelProvider(this)[PoseViewModel::class.java]
         viewModel.valueLiveData.observe(this) { newValue ->
-            jsonText += newValue
-            Log.d(TAG, "In Activity: $jsonText")
+                jsonText += newValue
+                Log.d(TAG, "In Activity: $jsonText")
         }
     }
 
@@ -140,9 +137,6 @@ abstract class MLVideoHelperActivity : AppCompatActivity(){
         JsonDataHolder.getInstance().setJsonData(jsonText)
         startActivity(intent)
         finish()
-
-//        scroll?.visibility = View.VISIBLE
-//        jsonTx?.text = jsonText
     }
 
     private val TAG = "PoseDetectorProcessor"

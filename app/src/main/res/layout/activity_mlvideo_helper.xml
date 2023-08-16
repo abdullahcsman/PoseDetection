@@ -35,23 +35,6 @@
         app:layout_constraintDimensionRatio="3:4"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <ScrollView
-        android:id="@+id/scrollView"
-        android:layout_width="match_parent"
-        android:visibility="invisible"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintDimensionRatio="3:4"
-        app:layout_constraintTop_toTopOf="parent">
-        <TextView
-            android:id="@+id/jsonTextView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="16dp"
-            android:textColor="@android:color/black"
-            android:textSize="16sp" />
-
-    </ScrollView>
 
     <ImageView
         android:id="@+id/testImageView"
