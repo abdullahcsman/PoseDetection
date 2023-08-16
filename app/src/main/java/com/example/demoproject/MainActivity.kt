@@ -11,9 +11,6 @@ import com.google.mlkit.vision.pose.accurate.AccuratePoseDetectorOptions
 class MainActivity : MLVideoHelperActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("Pointss", "App come here1")
-        Toast.makeText(this, "App come here1", Toast.LENGTH_LONG).show()
-
     }
 
     override fun setProcessor(): VisionBaseProcessor<*> {

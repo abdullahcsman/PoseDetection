@@ -1,6 +1,7 @@
 package com.example.demoproject
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.*
 import android.media.Image
@@ -9,6 +10,7 @@ import android.util.Log
 import android.view.Surface
 import android.view.View
 import android.widget.Button
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.OptIn
@@ -21,8 +23,8 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.example.demoproject.HelperClasses.GraphicOverlay
 import com.example.demoproject.HelperClasses.VisionBaseProcessor
+import com.example.demoproject.View.JsonDataHolder
 import com.example.demoproject.View.PoseViewModel
-import com.example.demoproject.View.Result
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.mlkit.vision.pose.Pose
@@ -37,13 +39,15 @@ import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
 
-abstract class MLVideoHelperActivity : AppCompatActivity(), Result {
+abstract class MLVideoHelperActivity : AppCompatActivity(){
     protected var previewView: PreviewView? = null
     protected var graphicOverlay: GraphicOverlay? = null
-    protected var result: Result? = null
     private var outputTextView: TextView? = null
     private var startButton: Button? = null
     private var stopButton: Button? = null
+    private var viewButton: Button? = null
+    private var scroll: ScrollView? = null
+    private var jsonTx: TextView? = null
     private var isCollectingData = false
     private val pose: Pose? = null
     private val collectedData: MutableList<MutableList<PoseLandmark>> = mutableListOf()
@@ -52,14 +56,18 @@ abstract class MLVideoHelperActivity : AppCompatActivity(), Result {
     private val executor: Executor = Executors.newSingleThreadExecutor()
     private lateinit var processor: VisionBaseProcessor<*>
     private var imageAnalysis: ImageAnalysis? = null
+    private var jsonText: String = ""
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_mlvideo_helper)
         previewView = findViewById(R.id.camera_source_preview)
         graphicOverlay = findViewById(R.id.graphic_overlay)
         outputTextView = findViewById(R.id.output_text_view)
+        scroll = findViewById(R.id.scrollView)
+        jsonTx = findViewById(R.id.jsonTextView)
         startButton = findViewById(R.id.startBtn)
         stopButton = findViewById(R.id.stopBtn)
+        viewButton = findViewById(R.id.viewBtn)
         addFaceButton = findViewById(R.id.button_add_face)
 
         startButton?.setOnClickListener {
@@ -70,6 +78,10 @@ abstract class MLVideoHelperActivity : AppCompatActivity(), Result {
             onStopClick()
         }
 
+        viewButton?.setOnClickListener {
+            onViewCLick()
+        }
+
         processor = setProcessor()
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.CAMERA), REQUEST_CAMERA)
@@ -77,7 +89,8 @@ abstract class MLVideoHelperActivity : AppCompatActivity(), Result {
 
         val viewModel: PoseViewModel = ViewModelProvider(this)[PoseViewModel::class.java]
         viewModel.valueLiveData.observe(this) { newValue ->
-            Log.d(TAG, "In Activity: $newValue")
+            jsonText += newValue
+            Log.d(TAG, "In Activity: $jsonText")
         }
     }
 
@@ -118,14 +131,21 @@ abstract class MLVideoHelperActivity : AppCompatActivity(), Result {
         stopButton?.visibility = View.INVISIBLE
         previewView?.visibility = View.INVISIBLE
         graphicOverlay?.visibility = View.INVISIBLE
-        startButton?.visibility = View.VISIBLE
+        viewButton?.visibility = View.VISIBLE
+        Log.d("$TAG", jsonText)
+    }
+
+    private fun onViewCLick() {
+        val intent = Intent(this, ViewJSON::class.java)
+        JsonDataHolder.getInstance().setJsonData(jsonText)
+        startActivity(intent)
+        finish()
+
+//        scroll?.visibility = View.VISIBLE
+//        jsonTx?.text = jsonText
     }
 
     private val TAG = "PoseDetectorProcessor"
-
-    override fun onResult(result: String) {
-
-    }
 
     private fun exportDataToJSON() {
         val jsonArray = JSONArray()
@@ -134,7 +154,6 @@ abstract class MLVideoHelperActivity : AppCompatActivity(), Result {
             for (landmark in poseLandmarks) {
                 val landmarkObject = JSONObject()
                 try {
-                    Toast.makeText(this, "App come here3", Toast.LENGTH_SHORT).show()
                     landmarkObject.put("x", landmark.position.x.toDouble())
                     landmarkObject.put("y", landmark.position.y.toDouble())
                     landmarkObject.put("type", landmark.landmarkType)
@@ -153,12 +172,6 @@ abstract class MLVideoHelperActivity : AppCompatActivity(), Result {
         // Save jsonString to a JSON file (e.g., using FileWriter or other methods)
     }
 
-    private fun processPoseData() {
-        if (isCollectingData) {
-            Toast.makeText(this, pose.toString(), Toast.LENGTH_LONG).show()
-            pose?.allPoseLandmarks?.let { collectedData.add(it) }
-        }
-    }
 
     override fun onRequestPermissionsResult(
         requestCode: Int,

@@ -33,7 +33,6 @@ import androidx.lifecycle.ViewModelStoreOwner;
 import com.example.demoproject.HelperClasses.classification.PoseClassifierProcessor;
 import com.example.demoproject.MainActivity;
 import com.example.demoproject.View.PoseViewModel;
-import com.example.demoproject.View.Result;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
@@ -49,10 +48,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -95,22 +90,6 @@ public class PoseDetectorProcessor extends VisionBaseProcessor<PoseDetectorProce
 
     private GraphicOverlay graphicOverlay;
     private PreviewView previewView;
-    private Result result;
-
-//    public class SendResult {
-//
-//        private Result result;
-//
-//        public void setResultListener(Result listener) {
-//            this.result = result;
-//        }
-//
-//        public void passData(String value) {
-//            if (result != null) {
-//                result.onResult(value);
-//            }
-//        }
-//    }
 
     public  PoseDetectorProcessor(
             PoseDetectorOptionsBase options,
